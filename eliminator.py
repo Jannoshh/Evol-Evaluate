@@ -26,11 +26,10 @@ def process_files():
 
         with open(file_path, 'r') as json_file:
             data = json.load(json_file)
-        
-        first_category = list(data.keys())[0]
-        questions = data[first_category]
-
-        data[first_category] = [q for q in questions if not should_delete_question(q['question'])]
+            
+        for category in data.keys():
+            questions = data[category]
+            data[category] = [q for q in questions if not should_delete_question(q['question'])]
 
         with open(file_path, 'w') as json_file:
             json.dump(data, json_file, indent=4)
