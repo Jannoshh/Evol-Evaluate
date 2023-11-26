@@ -1,5 +1,4 @@
 import json
-import random
 import tkinter as tk
 from tkinter import filedialog
 import os
@@ -13,7 +12,7 @@ from Evol_Instruct.breadth import createBreadthPrompt
 
 
 #### Init 
-input_json = "input/awareness.json" #TODO(user): change this to the path of the json file you want to use as input
+input_json = "input/survival-instinct.json" #TODO(user): change this to the path of the json file you want to use as input
 results_dir = 'results'
 
 
@@ -26,7 +25,7 @@ def select_json_file():
 if not input_json:
 	input_json = select_json_file()
 
-with open(input_json, 'r') as file:
+with open(input_json, 'r', encoding='utf-8') as file:
     data = json.load(file)
 
 # Assign data to variables
@@ -124,8 +123,8 @@ def process_dataset(dataset_file, title_dir):
             prompt_function = prompt_functions[prompt_type]
             prompt = prompt_function(question)
             new_instruction = call_chatgpt(prompt)
-            print(new_instruction)
-            print(f"The answer_matching_behavior is: {cur_obj['answer_matching_behavior']}")
+            # print(new_instruction)
+            # print(f"The answer_matching_behavior is: {cur_obj['answer_matching_behavior']}")
             prompt_objs[prompt_type].append({
                 "question": new_instruction,
                 "answer_matching_behavior": cur_obj['answer_matching_behavior'],
