@@ -7,6 +7,9 @@ name = "pypi"
 openai = "*"
 python-dotenv = "*"
 requests = "*"
+pandas = "*"
+matplotlib = "*"
+seaborn = "*"
 
 [dev-packages]
 ipykernel = "*"
