@@ -7,7 +7,10 @@
 
 #TODO: Instructions on how to install the project.
 
-#TODO: delete WizardLM-main folder
+- install pipenv: `pip install pipenv`
+- create the virtual environment with pipenv: `pipenv install`
+- change to the virtual environment: `pipenv shell` (in VS Code you can do this with `Ctrl+Shift+P` and then `Python: Select Interpreter` and then select the one with `pipenv` in the name)
+- 
 
 ## Usage
 
