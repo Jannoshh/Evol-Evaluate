@@ -4,12 +4,18 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 import re
+from tqdm import tqdm
+
 
 from Evol_Instruct.openai_access import call_chatgpt
 from Evol_Instruct.depth import createConstraintsPrompt, createDeepenPrompt, createConcretizingPrompt, createReasoningPrompt
 from Evol_Instruct.breadth import createBreadthPrompt
 
+
+#### Init 
 input_json = "input/awareness.json" #TODO(user): change this to the path of the json file you want to use as input
+results_dir = 'results'
+
 
 def select_json_file():
 	root = tk.Tk()
@@ -24,24 +30,20 @@ with open(input_json, 'r') as file:
     data = json.load(file)
 
 # Assign data to variables
-title = data['title']
+title = data['title'].lower().replace(' ', '_')
 desired_size_dataset = data['desired_size_dataset']
 instruction = data['instruction']
 few_shots = data['few_shots']
-
+title_dir = os.path.join(results_dir, title)
 
 if not few_shots:
     raise ValueError("Error: There should be at least 1 example shot to know the exact format that the output should have.")
 
+#### Create DS1 and DS2
 def format_entry(entry):
     try:
-		# Replace single quotes with double quotes, but avoid replacing single quotes within the text
-        formatted_entry = re.sub(r"(?<!\w)'|'(?!\w)", '"', entry)
-
-        # Parse the string into a dictionary
+        formatted_entry = re.sub(r"(?<!\w)'|'(?!\w)", '"', entry)# Replace single quotes with double quotes, but avoid replacing single quotes within the text
         entry_dict = json.loads(formatted_entry)
-
-		# Extract and format the necessary information
         question = entry_dict['question']
         choices = entry_dict['choices']
         answer_matching = entry_dict['answer_matching_behavior']
@@ -89,22 +91,51 @@ for _ in range(desired_size_dataset):
     formatted_entry_DS2 = format_entry(entry_DS2)
     add_to_dataset(DS2, formatted_entry_DS2)
 
-# Optionally, convert the datasets to JSON
-json_ds1 = json.dumps(DS1, indent=4)
-json_ds2 = json.dumps(DS2, indent=4)
-
-
-# Ensure 'results' directory exists
-results_dir = 'results'
-os.makedirs(results_dir, exist_ok=True)
-
-# Ensure directory for 'title' exists
-title_dir = os.path.join(results_dir, title)
-os.makedirs(title_dir, exist_ok=True)
-
-# Dump DS1 and DS2 as JSON files
+os.makedirs(results_dir, exist_ok=True)# Ensure 'results' directory exists
+os.makedirs(title_dir, exist_ok=True)# Ensure directory for 'title' exists
 with open(os.path.join(title_dir, 'DS1.json'), 'w') as f:
 	json.dump(DS1, f)
 
 with open(os.path.join(title_dir, 'DS2.json'), 'w') as f:
 	json.dump(DS2, f)
+
+
+
+
+#### Create DS1-, DS2-subsets using evol_instruct
+def process_dataset(dataset_file, title_dir):
+    with open(os.path.join(title_dir, dataset_file), 'r') as file:
+        all_objs = json.load(file)
+
+    prompt_types = ["constraints", "deepen", "concretizing", "reasoning", "breadth"]
+    prompt_functions = {
+        "constraints": createConstraintsPrompt,
+        "deepen": createDeepenPrompt,
+        "concretizing": createConcretizingPrompt,
+        "reasoning": createReasoningPrompt,
+        "breadth": createBreadthPrompt
+    }
+    prompt_objs = {prompt_type: [] for prompt_type in prompt_types}
+
+    for cur_obj in tqdm(all_objs):
+        question = cur_obj['question'].strip()
+
+        for prompt_type in prompt_types:
+            prompt_function = prompt_functions[prompt_type]
+            prompt = prompt_function(question)
+            new_instruction = call_chatgpt(prompt)
+            print(new_instruction)
+            print(f"The answer_matching_behavior is: {cur_obj['answer_matching_behavior']}")
+            prompt_objs[prompt_type].append({
+                "question": new_instruction,
+                "answer_matching_behavior": cur_obj['answer_matching_behavior'],
+                "answer_not_matching_behavior": cur_obj['answer_not_matching_behavior']
+            })
+            
+
+    output_file = f'{dataset_file.split(".")[0]}_evolvintruct.json'
+    with open(os.path.join(title_dir, output_file), 'w') as file:
+        json.dump(prompt_objs, file, indent=4)
+
+process_dataset('DS1.json', title_dir)
+process_dataset('DS2.json', title_dir)
